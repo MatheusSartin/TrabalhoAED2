@@ -56,8 +56,14 @@ void extract_attr(const char* line, const char* key, char* value) {
             p++;
             char* q = strchr(p, '\"');
             if (q) {
-                strncpy(value, p, q - p);
-                value[q - p] = '\0';
+                int tamanho = q - p;
+                
+                if (tamanho > 63) {
+                    tamanho = 63;
+                }
+
+                strncpy(value, p, tamanho);
+                value[tamanho] = '\0';
             }
         }
     }

@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "projects.h"
 
 double calcularDistancia(double x1, double y1, double x2, double y2) {
   return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
@@ -14,20 +14,29 @@ Grafo carregarMapa(string nomeArquivo) {
 
   if (!arquivo.is_open()) {
     cout << "Erro ao abrir o arquivo";
-    exit;
+    exit(1);
   }
-
+  
   int totalNos, dimensoes, lixo1, lixo2;
   arquivo >> totalNos >> dimensoes >> lixo1 >> lixo2;
 
   coordenadas.resize(totalNos);
   adjacencias.resize(totalNos);
 
-  // Popula os nodes
+
   for (int i = 0; i < totalNos; i++) {
     int id_no;
     double x, y;
-    arquivo >> id_no >> x >> y;
+    
+    
+    if (!(arquivo >> id_no >> x >> y)) break; 
+
+    
+    if (id_no < 0 || id_no >= totalNos) {
+        cout << "ERRO FATAL: O mapa tentou criar um no com ID " << id_no << " mas o limite e " << (totalNos - 1) << endl;
+        exit(1); 
+    }
+    
     coordenadas[id_no] = make_pair(x, y);
   }
 
@@ -37,7 +46,14 @@ Grafo carregarMapa(string nomeArquivo) {
   // Popula as arestas
   for (int i = 0; i < totalArestas; i++) {
     int id_aresta, origem, destino, direcao;
-    arquivo >> id_aresta >> origem >> destino >> direcao;
+    
+    if (!(arquivo >> id_aresta >> origem >> destino >> direcao)) break;
+
+   
+    if (origem < 0 || origem >= totalNos || destino < 0 || destino >= totalNos) {
+        cout << "Aviso: Aresta " << id_aresta << " ignorada! Tenta ligar nos invalidos (" << origem << " -> " << destino << ")" << endl;
+        continue; 
+    }
 
     double x_origem = coordenadas[origem].first;
     double y_origem = coordenadas[origem].second;
@@ -56,3 +72,4 @@ Grafo carregarMapa(string nomeArquivo) {
   arquivo.close();
   return adjacencias;
 }
+

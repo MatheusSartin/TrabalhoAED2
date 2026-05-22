@@ -1,21 +1,19 @@
-#include "parser.h"
+#include "projects.h"
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
 
-  // o nome do arquivo será passada como argumento da funcao
-  std::string Mapa = argv[1];
+  if (argc < 2) {
+      cout << "Erro: Voce esqueceu de passar o nome do mapa!" << endl;
+      cout << "Uso correto: .\\programa.exe map.poly" << endl;
+      return 1; 
+  }
+  string Mapa = argv[1];
+
 
   Grafo gr = carregarMapa(Mapa);
-
-  // demonstração
-  for (int i = 0; i < gr.size(); i++) {
-    for (int j = 0; j < gr[i].size(); j++) {
-
-      cout << i << " " << gr[i][j].first << " " << gr[i][j].second << "\n";
-    }
-  }
-
+  Dijkstra(gr , 40 , 570);
+  
   return 0;
 }
