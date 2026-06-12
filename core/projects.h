@@ -9,14 +9,12 @@
 #include <utility>
 #include <vector>
 
-
-using namespace std;
-typedef vector<vector<pair<int, double>>> Grafo;
+typedef std::vector<std::vector<std::pair<int, double>>> Grafo;
 
 // Funcoes
 double calcularDistancia(double x1, double y1, double x2, double y2);
-Grafo carregarMapa(string nomeArquivo);
+Grafo carregarMapa(std::string nomeArquivo);
 
-void Dijkstra(const Grafo& grafo, int origem, int destino);
+void Dijkstra(const Grafo &grafo, int origem, int destino);
 
 #endif
