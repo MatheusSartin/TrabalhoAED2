@@ -1,0 +1,5 @@
+#ignorando arquivos gerados pelo qtcreator
+.qtcreator
+
+#ignorando o diretorio de build
+/build
