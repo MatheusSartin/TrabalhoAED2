@@ -6,40 +6,324 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1200</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Navegador de Rotas - Dijkstra</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+QMainWindow {
+    background-color: #F8F9FA;
+}
+QFrame#sidebarFrame {
+    background-color: #FFFFFF;
+    border-right: 1px solid #E0E0E0;
+}
+QPushButton#btnCarregarMapa {
+    background-color: #1A56DB;
+    color: white;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 14px;
+}
+QPushButton#btnCarregarMapa:hover {
+    background-color: #1E40AF;
+}
+QPushButton#btnCalcular {
+    background-color: #10B981;
+    color: white;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 14px;
+}
+QPushButton#btnCalcular:hover {
+    background-color: #059669;
+}
+QLabel#lblTitle {
+    font-size: 18px;
+    font-weight: bold;
+    color: #111827;
+}
+QLabel#lblSubtitle {
+    font-size: 12px;
+    color: #6B7280;
+}
+QLabel#lblSection {
+    font-size: 13px;
+    font-weight: bold;
+    color: #4B5563;
+    margin-top: 15px;
+}
+QSpinBox {
+    padding: 6px;
+    padding-right: 28px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #111827;
+    background: white;
+    selection-background-color: #3B82F6;
+    selection-color: white;
+}
+QSpinBox::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    width: 24px;
+    height: 14px;
+    border-left: 1px solid #D1D5DB;
+    border-bottom: 1px solid #E5E7EB;
+    border-top-right-radius: 6px;
+    background: #F3F4F6;
+}
+QSpinBox::up-button:hover { background: #DBEAFE; }
+QSpinBox::up-button:pressed { background: #BFDBFE; }
+QSpinBox::up-arrow { width: 8px; height: 8px; }
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    width: 24px;
+    height: 14px;
+    border-left: 1px solid #D1D5DB;
+    border-top: 1px solid #E5E7EB;
+    border-bottom-right-radius: 6px;
+    background: #F3F4F6;
+}
+QSpinBox::down-button:hover { background: #DBEAFE; }
+QSpinBox::down-button:pressed { background: #BFDBFE; }
+QSpinBox::down-arrow { width: 8px; height: 8px; }
+QGraphicsView {
+    border: none;
+    background-color: #F8F9FA;
+}
+   </string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>350</x>
-      <y>130</y>
-      <width>80</width>
-      <height>24</height>
-     </rect>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+     <number>0</number>
     </property>
-    <property name="text">
-     <string>PushButton</string>
+    <property name="leftMargin">
+     <number>0</number>
     </property>
-   </widget>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="sidebarFrame">
+      <property name="minimumSize">
+       <size>
+        <width>320</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>320</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>15</number>
+       </property>
+       <property name="leftMargin">
+        <number>20</number>
+       </property>
+       <property name="topMargin">
+        <number>20</number>
+       </property>
+       <property name="rightMargin">
+        <number>20</number>
+       </property>
+       <property name="bottomMargin">
+        <number>20</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="lblTitle">
+         <property name="text">
+          <string>Navegador de Rotas</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblSubtitle">
+         <property name="text">
+          <string>Dijkstra Pathfinding Engine</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_1">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+         <widget class="QLabel" name="lblSection1">
+          <property name="text">
+           <string>1. GERIR MAPA</string>
+          </property>
+         </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCarregarMapa">
+         <property name="text">
+          <string>Carregar Mapa (.poly)</string>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="line_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+         <widget class="QLabel" name="lblSection2">
+          <property name="text">
+           <string>2. PROCURAR CAMINHO</string>
+          </property>
+         </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelOrigem">
+         <property name="text">
+          <string>Nó Origem</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spinOrigem">
+         <property name="maximum">
+          <number>9999999</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelDestino">
+         <property name="text">
+          <string>Nó Destino</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spinDestino">
+         <property name="maximum">
+          <number>9999999</number>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_calc">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>10</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCalcular">
+         <property name="text">
+          <string>Calcular Menor Caminho</string>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QFrame" name="statsFrame">
+         <property name="frameShape">
+          <enum>QFrame::StyledPanel</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="lblStatus">
+            <property name="text">
+             <string>Pronto.</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblCost">
+            <property name="text">
+             <string>Custo: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblTime">
+            <property name="text">
+             <string>Tempo: -</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lblNodes">
+            <property name="text">
+             <string>Nós Explorados: -</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+      <widget class="ZoomableGraphicsView" name="graphicsView"/>
+     </item>
+   </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>21</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ZoomableGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mainwindow.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

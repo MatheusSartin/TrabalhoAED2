@@ -22,3 +22,9 @@ target_link_libraries(aed2_gui PRIVATE
     Qt${QT_VERSION_MAJOR}::Widgets
     aed2_core
 )
+
+# Force the correct C++ standard on the target so MOC compilation uses it
+set_target_properties(aed2_gui PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
+
+# Garantir que o diretorio de source do GUI esteja no include path (para o ui_mainwindow.h gerado achar mainwindow.h)
+target_include_directories(aed2_gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -12,8 +12,13 @@ int main(int argc, char *argv[]) {
   string Mapa = argv[1];
 
 
-  Grafo gr = carregarMapa(Mapa);
-  Dijkstra(gr , 40 , 570);
+  MapData mapData = carregarMapa(Mapa);
+  DijkstraResult res = Dijkstra(mapData.adjacencias, 40, 570);
+
+  if (res.success) {
+      cout << "Custo: " << res.distance << " m, Tempo: " << res.timeMs << " ms" << endl;
+  }
+
   
   return 0;
 }

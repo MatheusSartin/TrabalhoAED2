@@ -1,3 +1,5 @@
+#include <utility>
+#include <type_traits>
 #include "mainwindow.h"
 #include <QApplication>
 // teste

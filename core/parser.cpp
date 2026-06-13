@@ -7,7 +7,7 @@ double calcularDistancia(double x1, double y1, double x2, double y2) {
 }
 
 // Carrega o mapa
-Grafo carregarMapa(string nomeArquivo) {
+MapData carregarMapa(string nomeArquivo) {
 
   vector<pair<double, double>> coordenadas; // cada node i tera uma coordenada
   Grafo adjacencias; // cada node i tera um vector de arestas: A<destino, peso>
@@ -74,5 +74,5 @@ Grafo carregarMapa(string nomeArquivo) {
   }
 
   arquivo.close();
-  return adjacencias;
+  return MapData{adjacencias, coordenadas};
 }

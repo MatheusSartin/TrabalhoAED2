@@ -11,10 +11,23 @@
 
 typedef std::vector<std::vector<std::pair<int, double>>> Grafo;
 
+struct MapData {
+    Grafo adjacencias;
+    std::vector<std::pair<double, double>> coordenadas;
+};
+
+struct DijkstraResult {
+    bool success;
+    std::vector<int> path;
+    double distance;
+    double timeMs;
+    int nodesExplored;
+};
+
 // Funcoes
 double calcularDistancia(double x1, double y1, double x2, double y2);
-Grafo carregarMapa(std::string nomeArquivo);
+MapData carregarMapa(std::string nomeArquivo);
 
-void Dijkstra(const Grafo &grafo, int origem, int destino);
+DijkstraResult Dijkstra(const Grafo &grafo, int origem, int destino);
 
 #endif
