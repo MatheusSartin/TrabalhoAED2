@@ -13,6 +13,8 @@
 #include <QColor>
 #include <QFont>
 #include <QCoreApplication>
+#include <QProcess>
+#include <QFile>
 #include <cmath>
 #include "../core/projects.h"
 
@@ -389,8 +391,31 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->viewport()->installEventFilter(this);
  
     ui->spinOrigem->installEventFilter(this);
+    ui->spinOrigem->setMinimum(-1);
+    ui->spinOrigem->setValue(-1);
+    ui->spinOrigem->setSpecialValueText(" ");
+
     ui->spinDestino->installEventFilter(this);
+    ui->spinDestino->setMinimum(-1);
+    ui->spinDestino->setValue(-1);
+    ui->spinDestino->setSpecialValueText(" ");
+
     ui->spinParada->installEventFilter(this);
+    ui->spinParada->setMinimum(-1);
+    ui->spinParada->setValue(-1);
+    ui->spinParada->setSpecialValueText(" ");
+
+    QLabel *legendLabel = new QLabel(ui->graphicsView);
+    legendLabel->setText("<b>Legenda:</b><br><br>"
+                         "<span style='color:#3B82F6;'>■</span> Via de Mão Dupla (Mapa Geral)<br>"
+                         "<span style='color:#F97316;'>■</span> Via de Mão Única (Mapa Geral)<br>"
+                         "<span style='color:#EF4444;'>■</span> Trajeto de Interesse (Mão Dupla)<br>"
+                         "<span style='color:#F97316;'>■</span> Trajeto de Interesse (Mão Única)");
+    legendLabel->setStyleSheet("background-color: rgba(255, 255, 255, 0.9); border: 1px solid #D1D5DB; border-radius: 6px; padding: 10px;");
+    
+    QGridLayout *overlayLayout = new QGridLayout(ui->graphicsView);
+    overlayLayout->setContentsMargins(15, 15, 15, 15);
+    overlayLayout->addWidget(legendLabel, 0, 0, Qt::AlignTop | Qt::AlignLeft);
 }
  
 /**
@@ -569,8 +594,43 @@ void MainWindow::highlightSelectedNodes()
  */
 void MainWindow::on_btnCarregarMapa_clicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, "Abrir Mapa", "", "Polygon Files (*.poly);;Todos Arquivos (*)");
+    QString fileName = QFileDialog::getOpenFileName(this, "Abrir Mapa", "", "Map Files (*.poly *.osm);;Polygon Files (*.poly);;OSM Files (*.osm);;Todos Arquivos (*)");
     if (fileName.isEmpty()) return;
+
+    if (fileName.endsWith(".osm", Qt::CaseInsensitive)) {
+        ui->lblStatus->setText("Convertendo arquivo .osm para .poly...");
+        QCoreApplication::processEvents();
+
+        QString appDir = QCoreApplication::applicationDirPath();
+        QString converterPath = appDir + "/../core/osm_converter.exe";
+        if (!QFile::exists(converterPath)) {
+            converterPath = appDir + "/osm_converter.exe";
+        }
+        if (!QFile::exists(converterPath)) {
+            converterPath = "osm_converter.exe";
+        }
+
+        QProcess process;
+        process.start(converterPath, QStringList() << fileName);
+        if (!process.waitForFinished(60000)) {
+            QMessageBox::critical(this, "Erro", "Tempo limite excedido na conversão do arquivo OSM.");
+            ui->lblStatus->setText("Falha na conversão.");
+            return;
+        }
+        if (process.exitCode() != 0) {
+            QMessageBox::critical(this, "Erro", "Falha na conversão do arquivo OSM. O conversor retornou código: " + QString::number(process.exitCode()));
+            ui->lblStatus->setText("Falha na conversão.");
+            return;
+        }
+
+        QString newFileName = fileName.left(fileName.length() - 4) + ".poly";
+        if (!QFile::exists(newFileName)) {
+            QMessageBox::critical(this, "Erro", "Arquivo .poly não foi encontrado após a conversão.");
+            ui->lblStatus->setText("Falha na conversão.");
+            return;
+        }
+        fileName = newFileName;
+    }
 
     try {
         if (currentMap) delete currentMap;
@@ -632,7 +692,7 @@ void MainWindow::drawMap()
     nodeRadius = maxRange * 0.004;
     if (nodeRadius < 1.0) nodeRadius = 1.0;
 
-    QPen edgePen(QColor("#94A3B8"));
+    QPen edgePen(QColor("#3B82F6")); // Azul para vias de mão dupla gerais
     edgePen.setWidthF(nodeRadius * 0.3);
     edgePen.setCosmetic(false);
     edgePen.setJoinStyle(Qt::RoundJoin);
@@ -640,7 +700,7 @@ void MainWindow::drawMap()
 
     QPen onewayPen = edgePen;
     onewayPen.setStyle(Qt::DashLine);
-    onewayPen.setColor(QColor("#64748B"));
+    onewayPen.setColor(QColor("#F97316")); // Laranja
 
     QBrush nodeBrush(QColor("#3B82F6"));
     QPen   nodePen(QColor("#1E3A5F"));
@@ -870,9 +930,22 @@ void MainWindow::drawPath(const std::vector<std::vector<int>>& subPaths)
             double x1 = currentMap->coordenadas[u].first,  y1 = currentMap->coordenadas[u].second;
             double x2 = currentMap->coordenadas[v].first,  y2 = currentMap->coordenadas[v].second;
             
+            bool isOneWay = true;
+            for (const auto& revAresta : currentMap->adjacencias[v]) {
+                if (revAresta.first == u) {
+                    isOneWay = false;
+                    break;
+                }
+            }
+
+            QPen currentPen = pathPen;
+            if (isOneWay) {
+                currentPen.setColor(QColor("#F97316")); // Laranja
+            }
+
             // Desenha trechos interativos da rota
             RouteLineItem* line = new RouteLineItem(x1, y1, x2, y2, u, v, static_cast<int>(legIndex), this);
-            line->setPen(pathPen);
+            line->setPen(currentPen);
             line->setZValue(2);
             scene->addItem(line);
             pathEdgeItems.push_back(line);
@@ -949,15 +1022,14 @@ void MainWindow::exibirCaminho(const DijkstraResult &resultado, int origem, int 
  
     if (!resultado.encontrado) {
         auto *item = new QListWidgetItem(QString("  ⚠️ Sem rota entre o nó %1 e o nó %2.").arg(origem).arg(destino));
-        item->setForeground(QColor("#FF6B6B"));
+        item->setForeground(QColor("#EF4444"));
         ui->listWidgetCaminho->addItem(item);
         return;
     }
  
-    // Cabeçalho da listagem de passos
-    auto *header = new QListWidgetItem("  Passo       Nó Origem  →  Nó Destino       Distância do Trecho");
-    header->setBackground(QColor("#2D2D5E"));
-    header->setForeground(QColor("#B8B8FF"));
+    auto *header = new QListWidgetItem("  Passo       Nó O.  →  Nó D.       Distância");
+    header->setBackground(QColor("#E5E7EB"));
+    header->setForeground(QColor("#111827"));
     QFont fHeader = header->font(); fHeader.setBold(true); header->setFont(fHeader);
     ui->listWidgetCaminho->addItem(header);
     ui->listWidgetCaminho->addItem(new QListWidgetItem(QString(60, QChar('-'))));
@@ -972,14 +1044,14 @@ void MainWindow::exibirCaminho(const DijkstraResult &resultado, int origem, int 
                             .arg(distTrecho, 10, 'f', 2);
  
         auto *item = new QListWidgetItem(linha);
-        item->setBackground(i % 2 == 0 ? QColor("#1A1A2E") : QColor("#16213E"));
+        item->setBackground(i % 2 == 0 ? QColor("#F9FAFB") : QColor("#F3F4F6"));
  
         if (i == 0)
-            item->setForeground(QColor("#78FFD6"));
+            item->setForeground(QColor("#16A34A")); // Verde (Partida)
         else if (i == caminho.size() - 2)
-            item->setForeground(QColor("#FF9F43"));
+            item->setForeground(QColor("#EA580C")); // Laranja (Chegada)
         else
-            item->setForeground(QColor("#E0E0E0"));
+            item->setForeground(QColor("#1F2937"));
  
         ui->listWidgetCaminho->addItem(item);
     }
@@ -990,118 +1062,116 @@ void MainWindow::exibirCaminho(const DijkstraResult &resultado, int origem, int 
         QString("  Total: %1 trechos  |  Distância: %2 m")
             .arg(caminho.size() - 1)
             .arg(resultado.distanciaTotal, 0, 'f', 2));
-    rodape->setBackground(QColor("#2D2D5E"));
-    rodape->setForeground(QColor("#B8B8FF"));
+    rodape->setBackground(QColor("#E5E7EB"));
+    rodape->setForeground(QColor("#111827"));
     QFont fRodape = rodape->font(); fRodape.setBold(true); rodape->setFont(fRodape);
     ui->listWidgetCaminho->addItem(rodape);
 }
  
 /**
- * @brief Define as folhas de estilo CSS da aplicação (modo dark/premium).
+ * @brief Define as folhas de estilo CSS da aplicação (modo light/claro).
  */
 void MainWindow::aplicarEstilo()
 {
     setStyleSheet(R"(
         QMainWindow {
-            background-color: #0F0F23;
+            background-color: #F3F4F6;
         }
         QWidget {
-            background-color: #0F0F23;
-            color: #E0E0E0;
+            background-color: #F3F4F6;
+            color: #1F2937;
             font-family: "Monospace";
             font-size: 13px;
         }
-        QLabel#labelTitulo {
-            color: #A8FF78;
+        QFrame#sidebarFrame {
+            background-color: #FFFFFF;
+            border-right: 1px solid #E5E7EB;
+        }
+        QFrame#statsFrame, QFrame#stopsFrame {
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            padding: 4px;
+        }
+        QLabel#labelTitulo, QLabel#lblTitle {
+            color: #2563EB;
             font-size: 18px;
             font-weight: bold;
-            padding: 12px;
-            border-bottom: 1px solid #2D2D5E;
+            padding: 12px 0px;
+            border-bottom: 1px solid #E5E7EB;
             margin-bottom: 8px;
         }
-        QLabel {
-            color: #B8B8FF;
+        QLabel#lblSubtitle {
+            font-size: 11px;
+            color: #6B7280;
         }
-        QLineEdit {
-            background-color: #1A1A2E;
-            color: #E0E0E0;
-            border: 1px solid #3D3D8E;
+        QLabel {
+            color: #374151;
+            background: transparent;
+        }
+        QLineEdit, QSpinBox, QComboBox {
+            background-color: #FFFFFF;
+            color: #1F2937;
+            border: 1px solid #D1D5DB;
             border-radius: 4px;
             padding: 4px 8px;
-        }
-        QLineEdit:focus {
-            border-color: #A8FF78;
+            min-height: 25px;
         }
         QSpinBox {
-            background-color: #1A1A2E;
-            color: #E0E0E0;
-            border: 1px solid #3D3D8E;
-            border-radius: 4px;
-            padding: 4px 8px;
             min-width: 80px;
         }
-        QSpinBox:focus {
-            border-color: #A8FF78;
+        QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
+            border-color: #3B82F6;
         }
         QPushButton {
-            background-color: #2D2D5E;
-            color: #A8FF78;
-            border: 1px solid #A8FF78;
+            background-color: #E5E7EB;
+            color: #1F2937;
+            border: 1px solid #D1D5DB;
             border-radius: 6px;
-            padding: 6px 16px;
+            padding: 8px 16px;
             font-weight: bold;
         }
-        QPushButton:hover {
-            background-color: #A8FF78;
-            color: #0F0F23;
-        }
-        QPushButton:pressed {
-            background-color: #78C850;
-            color: #0F0F23;
-        }
+        QPushButton:hover { background-color: #D1D5DB; }
+        QPushButton:pressed { background-color: #9CA3AF; }
+
+        QPushButton#btnCarregarMapa { background-color: #2563EB; color: white; border: none; }
+        QPushButton#btnCarregarMapa:hover { background-color: #1D4ED8; }
+        
+        QPushButton#btnCalcular { background-color: #10B981; color: white; border: none; }
+        QPushButton#btnCalcular:hover { background-color: #059669; }
+        
+        QPushButton#btnLimpar { background-color: #EF4444; color: white; border: none; }
+        QPushButton#btnLimpar:hover { background-color: #DC2626; }
+
+        QPushButton#btnCopiarImagem { background-color: #6B7280; color: white; border: none; }
+        QPushButton#btnCopiarImagem:hover { background-color: #4B5563; }
+
         QListWidget {
-            background-color: #1A1A2E;
-            color: #E0E0E0;
-            border: 1px solid #2D2D5E;
+            background-color: #FFFFFF;
+            color: #1F2937;
+            border: 1px solid #E5E7EB;
             border-radius: 6px;
             font-family: "Monospace";
             font-size: 12px;
         }
         QListWidget::item {
-            padding: 3px 6px;
+            padding: 4px 6px;
+            border-bottom: 1px solid #F3F4F6;
         }
         QListWidget::item:selected {
-            background-color: #3D3D8E;
-            color: #FFFFFF;
+            background-color: #DBEAFE;
+            color: #1E3A8A;
         }
-        QStatusBar {
-            background-color: #0F0F23;
-            color: #555580;
+        QStatusBar, QMenuBar {
+            background-color: #FFFFFF;
+            color: #374151;
+            border-top: 1px solid #E5E7EB;
         }
-        QMenuBar {
-            background-color: #0F0F23;
-            color: #B8B8FF;
+        QGraphicsView {
+            background-color: #F9FAFB;
+            border: none;
         }
         QCheckBox {
-            color: #A8FF78;
-            font-weight: bold;
-            padding: 4px;
-        }
-        QComboBox {
-            background-color: #1A1A2E;
-            color: #E0E0E0;
-            border: 1px solid #3D3D8E;
-            border-radius: 4px;
-            padding: 4px 8px;
-            min-height: 25px;
-        }
-        QComboBox:focus {
-            border-color: #A8FF78;
-        }
-        QFrame#stopsFrame {
-            background-color: #1A1A2E;
-            border: 1px solid #3D3D8E;
-            border-radius: 6px;
             padding: 4px;
             margin-top: 5px;
             margin-bottom: 5px;
@@ -1211,10 +1281,11 @@ void MainWindow::on_btnLimpar_clicked()
         delete nodeLabel;
         nodeLabel = nullptr;
     }
-    ui->spinOrigem->setValue(0);
-    ui->spinDestino->setValue(0);
-    ui->spinParada->setValue(0);
+    ui->spinOrigem->setValue(-1);
+    ui->spinDestino->setValue(-1);
+    ui->spinParada->setValue(-1);
     paradas.clear();
+    nextClickTarget = 0;
     ui->listWidgetParadas->clear();
     clearPath();
     highlightSelectedNodes();

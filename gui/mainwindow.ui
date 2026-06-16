@@ -129,7 +129,7 @@ QListWidget::item:selected { background-color: #3D3D8E; color: white; }
 
        <item>
         <widget class="QPushButton" name="btnCarregarMapa">
-         <property name="text"><string>Carregar Mapa (.poly)</string></property>
+         <property name="text"><string>Carregar Mapa (.poly, .osm)</string></property>
          <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
         </widget>
        </item>
