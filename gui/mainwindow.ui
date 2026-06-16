@@ -6,40 +6,265 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>1280</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Navegador de Rotas - Dijkstra</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+QMainWindow { background-color: #0F0F23; }
+QFrame#sidebarFrame {
+    background-color: #16213E;
+    border-right: 1px solid #2D2D5E;
+}
+QFrame#statsFrame {
+    background-color: #1A1A2E;
+    border: 1px solid #2D2D5E;
+    border-radius: 6px;
+    padding: 4px;
+}
+QPushButton#btnCarregarMapa {
+    background-color: #1A56DB;
+    color: white;
+    border-radius: 6px;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton#btnCarregarMapa:hover { background-color: #1E40AF; }
+QPushButton#btnCalcular {
+    background-color: #10B981;
+    color: white;
+    border-radius: 6px;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton#btnCalcular:hover { background-color: #059669; }
+QPushButton#btnLimpar {
+    background-color: #E11D48;
+    color: white;
+    border-radius: 6px;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton#btnLimpar:hover { background-color: #BE123C; }
+QPushButton#btnCopiarImagem {
+    background-color: #4B5563;
+    color: white;
+    border-radius: 6px;
+    padding: 10px;
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton#btnCopiarImagem:hover { background-color: #374151; }
+QLabel#lblTitle  { font-size: 17px; font-weight: bold; color: #A8FF78; }
+QLabel#lblSubtitle { font-size: 11px; color: #6B7280; }
+QLabel { color: #B8B8FF; }
+QSpinBox {
+    background-color: #1A1A2E;
+    color: #E0E0E0;
+    border: 1px solid #3D3D8E;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QSpinBox:focus { border-color: #A8FF78; }
+QLineEdit {
+    background-color: #1A1A2E;
+    color: #E0E0E0;
+    border: 1px solid #3D3D8E;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+QLineEdit:focus { border-color: #A8FF78; }
+QGraphicsView { border: none; background-color: #0A0A1A; }
+QListWidget {
+    background-color: #1A1A2E;
+    color: #E0E0E0;
+    border: 1px solid #2D2D5E;
+    border-radius: 6px;
+    font-family: "Monospace";
+    font-size: 11px;
+}
+QListWidget::item { padding: 2px 4px; }
+QListWidget::item:selected { background-color: #3D3D8E; color: white; }
+   </string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>350</x>
-      <y>130</y>
-      <width>80</width>
-      <height>24</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PushButton</string>
-    </property>
-   </widget>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing"><number>0</number></property>
+    <property name="leftMargin"><number>0</number></property>
+    <property name="topMargin"><number>0</number></property>
+    <property name="rightMargin"><number>0</number></property>
+    <property name="bottomMargin"><number>0</number></property>
+    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+    <item>
+     <widget class="QFrame" name="sidebarFrame">
+      <property name="minimumSize"><size><width>370</width><height>0</height></size></property>
+      <property name="maximumSize"><size><width>370</width><height>16777215</height></size></property>
+      <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing"><number>10</number></property>
+       <property name="leftMargin"><number>16</number></property>
+       <property name="topMargin"><number>16</number></property>
+       <property name="rightMargin"><number>16</number></property>
+       <property name="bottomMargin"><number>16</number></property>
+
+       <!-- Título -->
+       <item>
+        <widget class="QLabel" name="lblTitle">
+         <property name="text"><string>Navegador de Rotas</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblSubtitle">
+         <property name="text"><string>Dijkstra Pathfinding Engine</string></property>
+        </widget>
+       </item>
+       <item><widget class="Line" name="line_1"><property name="orientation"><enum>Qt::Horizontal</enum></property></widget></item>
+
+       <item>
+        <widget class="QPushButton" name="btnCarregarMapa">
+         <property name="text"><string>Carregar Mapa (.poly)</string></property>
+         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelOrigem">
+         <property name="text"><string>Nó Origem</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spinOrigem">
+         <property name="maximum"><number>9999999</number></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="labelDestino">
+         <property name="text"><string>Nó Destino</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spinDestino">
+         <property name="maximum"><number>9999999</number></property>
+        </widget>
+       </item>
+         <item>
+          <widget class="QPushButton" name="btnCalcular">
+           <property name="text"><string>Calcular Menor Caminho</string></property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnLimpar">
+           <property name="text"><string>Limpar Rota</string></property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnCopiarImagem">
+           <property name="text"><string>Copiar Imagem do Grafo</string></property>
+           <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+          </widget>
+         </item>
+
+       <!-- Stats do mapa interativo -->
+       <item>
+        <widget class="QFrame" name="statsFrame">
+         <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item><widget class="QLabel" name="lblStatus"><property name="text"><string>Pronto.</string></property><property name="wordWrap"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="lblCost"><property name="text"><string>Custo: -</string></property></widget></item>
+          <item><widget class="QLabel" name="lblTime"><property name="text"><string>Tempo: -</string></property></widget></item>
+          <item><widget class="QLabel" name="lblNodes"><property name="text"><string>Nós Explorados: -</string></property></widget></item>
+         </layout>
+        </widget>
+        </item>
+        <item>
+         <widget class="QFrame" name="stopsFrame">
+          <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+          <layout class="QVBoxLayout" name="verticalLayout_stops">
+           <item>
+            <widget class="QLabel" name="lblParadas">
+             <property name="text"><string>Paradas Intermediárias</string></property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="hLayoutParada">
+             <item>
+              <widget class="QSpinBox" name="spinParada">
+               <property name="maximum"><number>9999999</number></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnAdicionarParada">
+               <property name="text"><string>+</string></property>
+               <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnRemoverParada">
+               <property name="text"><string>-</string></property>
+               <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QListWidget" name="listWidgetParadas">
+             <property name="maximumSize"><size><width>16777215</width><height>120</height></size></property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+        <widget class="QLabel" name="lblRotaTitulo">
+         <property name="text"><string>Rota a Seguir:</string></property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="listWidgetCaminho"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+
+    <!-- ── Mapa ─────────────────────────────────────────────────────────── -->
+    <item>
+     <widget class="ZoomableGraphicsView" name="graphicsView"/>
+    </item>
+
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>800</width>
-     <height>21</height>
-    </rect>
-   </property>
+   <property name="geometry"><rect><x>0</x><y>0</y><width>1280</width><height>24</height></rect></property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ZoomableGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>mainwindow.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -3,3 +3,8 @@
 
 #ignorando o diretorio de build
 /build
+/build-release
+
+# Presets locais de cada desenvolvedor (caminhos de compilador/Qt específicos da máquina)
+CMakeUserPresets.json
+CMakePresets.json

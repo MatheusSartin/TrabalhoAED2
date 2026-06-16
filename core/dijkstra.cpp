@@ -1,63 +1,112 @@
 #include "projects.h"
-#include <queue>     
-#include <limits>    
-#include <algorithm> 
+#include <queue>
+#include <limits>
+#include <algorithm>
+#include <chrono>
 
 using namespace std;
 
-void Dijkstra(const Grafo& grafo, int origem, int destino ) {
+/**
+ * @brief Executa o algoritmo de Dijkstra para encontrar o menor caminho.
+ * 
+ * @param grafo Estrutura do grafo contendo as listas de adjacências e pesos.
+ * @param origem ID do nó de partida da rota.
+ * @param destino ID do nó de chegada da rota.
+ * @return DijkstraResult Estrutura contendo o caminho, distância total e estatísticas.
+ */
+DijkstraResult Dijkstra(const Grafo& grafo, int origem, int destino) {
+    auto startTime = chrono::high_resolution_clock::now();
+    int nodesExplored = 0;
+    int totalNos = grafo.size();
+
+    vector<double> distancias(totalNos, numeric_limits<double>::infinity());
+    vector<int> path(totalNos, -1);
+    vector<bool> visitado(totalNos, false);
     
-    int total_nos = grafo.size();
-    vector<double> distancias(total_nos, numeric_limits<double>::infinity());
-    vector<int> path(total_nos, -1);
-    vector<bool> visitado(total_nos, false); 
-    priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>>   fila;
+    // Fila de prioridades organizada por menor distância (Min-Heap)
+    priority_queue<pair<double, int>, vector<pair<double, int>>, greater<pair<double, int>>> fila;
 
     distancias[origem] = 0.0;
     fila.push(make_pair(0.0, origem));
 
     while (!fila.empty()) {
-
-        int no_atual = fila.top().second;
+        int noAtual = fila.top().second;
         fila.pop();
 
-        if (no_atual == destino) break;
-        if (visitado[no_atual] == true) continue;
-        
-        visitado[no_atual] = true;
+        if (noAtual == destino) {
+            nodesExplored++;
+            break;
+        }
 
-        for (const auto& vizinho : grafo[no_atual]) {
+        if (visitado[noAtual]) continue;
+        visitado[noAtual] = true;
+        nodesExplored++;
 
-            int v = vizinho.first;        
+        for (const auto& vizinho : grafo[noAtual]) {
+            int v = vizinho.first;
             double peso = vizinho.second;
-            double novaDistancia = distancias[no_atual] + peso;
+            double novaDist = distancias[noAtual] + peso;
 
-            if (visitado[v] == false && novaDistancia < distancias[v]) {
-                distancias[v] = novaDistancia; 
-                path[v] = no_atual;           
-                fila.push(make_pair(novaDistancia, v)); 
+            // Relaxamento de aresta se um caminho mais curto for encontrado
+            if (!visitado[v] && novaDist < distancias[v]) {
+                distancias[v] = novaDist;
+                path[v] = noAtual;
+                fila.push(make_pair(novaDist, v));
             }
         }
     }
 
-    
-    vector<int> caminho;
+    auto endTime = chrono::high_resolution_clock::now();
+    double timeMs = chrono::duration<double, milli>(endTime - startTime).count();
+
+    DijkstraResult resultado;
+    resultado.timeMs = timeMs;
+    resultado.nodesExplored = nodesExplored;
 
     if (distancias[destino] == numeric_limits<double>::infinity()) {
-        cout << "Aviso: Nao existe uma rota possivel entre o no " << origem << " e o no " << destino << "." << endl;
-        return ; 
-    } 
+        resultado.encontrado = false;
+        return resultado;
+    }
+
+    // Reconstrói a rota retrocedendo a partir do destino
+    vector<int> caminho;
     for (int atual = destino; atual != -1; atual = path[atual]) {
         caminho.push_back(atual);
     }
-
     reverse(caminho.begin(), caminho.end());
-    cout << "\nO menor caminho para " << destino << " = " << distancias[destino] << " m\n" << endl;
 
-    for(size_t i = 0 ; i < caminho.size() - 1 ; i++){
-        double dist_trecho = distancias[caminho[i+1]] - distancias[caminho[i]];
-        cout << caminho[i] << " -> " << caminho[i+1] << " = " << dist_trecho << " m" << endl;
+    resultado.encontrado = true;
+    resultado.caminho = caminho;
+    resultado.distanciaTotal = distancias[destino];
+
+    for (size_t i = 0; i < caminho.size() - 1; i++) {
+        double distTrecho = distancias[caminho[i + 1]] - distancias[caminho[i]];
+        resultado.distanciasTrecho.push_back(distTrecho);
     }
 
-    return ;
+    return resultado;
+}
+
+/**
+ * @brief Imprime o resultado do cálculo de menor caminho de forma formatada.
+ * 
+ * @param resultado Estrutura contendo o caminho calculado e as informações de distância.
+ * @param origem ID do nó de origem da rota.
+ * @param destino ID do nó de destino da rota.
+ */
+void imprimirResultado(const DijkstraResult& resultado, int origem, int destino) {
+    if (!resultado.encontrado) {
+        cout << "Aviso: Nao existe uma rota possivel entre o no " << origem
+             << " e o no " << destino << "." << endl;
+        return;
+    }
+
+    cout << "\nO menor caminho para " << destino
+         << " = " << resultado.distanciaTotal << " m\n" << endl;
+
+    const auto& caminho = resultado.caminho;
+    for (size_t i = 0; i < caminho.size() - 1; i++) {
+        cout << caminho[i] << " -> " << caminho[i + 1]
+             << " = " << resultado.distanciasTrecho[i] << " m" << endl;
+    }
 }

@@ -17,13 +17,13 @@ typedef struct {
     double lon;
     double x;
     double y;
-    int id_interno; // de 0 a n-1
+    int id_interno;
 } Node;
 
 typedef struct {
-    int node_ids[MAX_WAY_NODES]; // Índices internos dos nós
+    int node_ids[MAX_WAY_NODES];
     int count;
-    int oneway; // NOVA VARIÁVEL: 0 para mão dupla, 1 para mão única
+    int oneway;
 } Way;
 
 Node nodes[MAX_NODES];
@@ -32,24 +32,35 @@ int total_nodes = 0;
 Way ways[MAX_WAYS];
 int total_ways = 0;
 
-// Parâmetros da zona UTM 23S
-const double a = 6378137.0;            // Semi-eixo maior WGS84
-const double f = 1.0 / 298.257223563;  // Achatamento
+// Parâmetros da projeção UTM zona 23S
+const double a = 6378137.0;
+const double f = 1.0 / 298.257223563;
 const double k0 = 0.9996;
-const double lon0_deg = -45.0; // longitude central da zona 23S
+const double lon0_deg = -45.0;
 
-// Procura o índice interno de um id original
+/**
+ * @brief Busca o ID interno atribuído a um nó a partir do seu ID original do OpenStreetMap.
+ * 
+ * @param id ID original do OpenStreetMap (long long).
+ * @return int ID interno correspondente (de 0 a n-1), ou -1 se não encontrado.
+ */
 int get_node_index(long long id) {
     for (int i = 0; i < total_nodes; i++) {
         if (nodes[i].id_original == id)
             return nodes[i].id_interno;
     }
-    return -1; // não encontrado
+    return -1;
 }
 
-// Extrai valor de atributo entre aspas
+/**
+ * @brief Extrai o valor de um atributo XML que está contido entre aspas.
+ * 
+ * @param line Linha de texto XML a ser analisada.
+ * @param key Nome do atributo (ex: "id=").
+ * @param value String de destino onde o valor do atributo será armazenado.
+ */
 void extract_attr(const char* line, const char* key, char* value) {
-    char* p = strstr(line, key);
+    char* p = (char*) strstr(line, key);
     if (p) {
         p = strchr(p, '\"');
         if (p) {
@@ -57,11 +68,9 @@ void extract_attr(const char* line, const char* key, char* value) {
             char* q = strchr(p, '\"');
             if (q) {
                 int tamanho = q - p;
-                
                 if (tamanho > 63) {
                     tamanho = 63;
                 }
-
                 strncpy(value, p, tamanho);
                 value[tamanho] = '\0';
             }
@@ -69,12 +78,18 @@ void extract_attr(const char* line, const char* key, char* value) {
     }
 }
 
+/**
+ * @brief Retorna os primeiros n caracteres de uma string.
+ * 
+ * @param str String original de entrada.
+ * @param n Quantidade de caracteres a extrair à esquerda.
+ * @return char* Ponteiro para a nova string alocada contendo o resultado.
+ */
 char *Left(char *str, int n) {
     int i;
     char *substr;
     if ((substr = (char*) malloc(sizeof(char) * (strlen(str)+1))) == NULL) {
         printf("Funcao Left: Memoria insuficiente para alocacao dinamica!\n");
-        system("pause > nul");
         exit(1);
     }   
     for (i=0; i<n; i++)
@@ -83,12 +98,19 @@ char *Left(char *str, int n) {
     return(substr);
 }
 
+/**
+ * @brief Extrai uma substring a partir de uma determinada posição.
+ * 
+ * @param s String original de entrada.
+ * @param pos Posição inicial para a extração (base 0).
+ * @param n Quantidade de caracteres a serem extraídos.
+ * @return char* Ponteiro para a nova string alocada contendo a substring.
+ */
 char *Substr(char *s, int pos, int n) {
   char *str;
   int i;
-    if ((str = (char *) malloc(strlen(s)+1)) == NULL) {
+  if ((str = (char *) malloc(strlen(s)+1)) == NULL) {
     printf("Funcao Substr: Memoria insuficiente para alocacao dinamica!\n");
-    system("pause > nul");
     exit(1);
   }
   for (i=0; i<n; i++)
@@ -97,25 +119,39 @@ char *Substr(char *s, int pos, int n) {
   return str;
 }
 
+/**
+ * @brief Encontra a última posição de ocorrência de uma substring em uma string.
+ * 
+ * @param sub Substring a ser pesquisada.
+ * @param string String onde será feita a busca.
+ * @return int Posição da última ocorrência (base 0), ou -1 se não encontrar.
+ */
 int RAt(char *sub, char *string) {
     int j;
     int pos = -1;
     int tamString, tamSub = strlen(sub);
     if (strstr(string, sub) != NULL) {
         tamString = strlen(string);
-    for (j=tamString-1; j >= 0; j--) {
-            // usando strncmp no lugar de stricmp para maior portabilidade
+        for (j=tamString-1; j >= 0; j--) {
             if (strncmp(Substr(string, j, tamSub), sub, tamSub) == 0) {
                 pos = j;
-            break;
-        }
-        else
-            pos = -1;
+                break;
+            } else {
+                pos = -1;
+            }
         }
     }
     return(pos);
 }
 
+/**
+ * @brief Converte coordenadas geográficas (Latitude e Longitude) em coordenadas planas UTM zona 23S.
+ * 
+ * @param lat_deg Latitude em graus decimais.
+ * @param lon_deg Longitude em graus decimais.
+ * @param x Ponteiro para a variável onde será gravada a coordenada X (leste).
+ * @param y Ponteiro para a variável onde será gravada a coordenada Y (norte).
+ */
 void converter_para_utm(double lat_deg, double lon_deg, double* x, double* y) {
     double e2 = f * (2 - f);                    
     double ep2 = e2 / (1 - e2);                 
@@ -143,6 +179,13 @@ void converter_para_utm(double lat_deg, double lon_deg, double* x, double* y) {
         *y += 10000000.0;
 }
 
+/**
+ * @brief Reduz a escala das coordenadas geográficas subtraindo o valor mínimo e dividindo por um redutor.
+ * 
+ * @param pontos Vetor contendo a lista de nós a serem processados.
+ * @param n Quantidade de nós contidos na lista.
+ * @param redutor Fator divisor de escala.
+ */
 void reduzirEscala(Node pontos[], int n, int redutor) {
     double minX = pontos[0].x, minY = pontos[0].y;
     for (int i = 1; i < n; i++) {
@@ -155,6 +198,11 @@ void reduzirEscala(Node pontos[], int n, int redutor) {
     } 
 }
 
+/**
+ * @brief Realiza o parsing de um arquivo XML do OpenStreetMap (.osm) e gera um arquivo no formato .poly.
+ * 
+ * @param filename Caminho do arquivo original do OpenStreetMap.
+ */
 void parse_osm(const char* filename) {
     char arqSaida[100];
     int posPonto = RAt(".", (char*)filename);
@@ -173,10 +221,9 @@ void parse_osm(const char* filename) {
     int inside_way = 0;
     Way current_way;
     current_way.count = 0;
-    current_way.oneway = 0; // Garante que começa zerado
+    current_way.oneway = 0;
 
     while (fgets(line, sizeof(line), f)) {
-        // Verifica se é um nó
         if (strstr(line, "<node") && strstr(line, "lat=") && strstr(line, "lon=")) {
             char id_str[64], lat_str[64], lon_str[64];
             extract_attr(line, "id=", id_str);
@@ -195,11 +242,10 @@ void parse_osm(const char* filename) {
             }
         }
 
-        // Verifica se é o início de uma via
         else if (strstr(line, "<way")) {
             inside_way = 1;
             current_way.count = 0;
-            current_way.oneway = 0; // Por padrão, toda rua é mão dupla (0)
+            current_way.oneway = 0;
         }
 
         else if (inside_way && strstr(line, "<tag")) {
@@ -208,7 +254,6 @@ void parse_osm(const char* filename) {
             extract_attr(line, "k=", k_str);
             extract_attr(line, "v=", v_str);
             
-            // Se achar a tag k="oneway" e o valor for "yes" ou "1", muda para mão única (1)
             if (strcmp(k_str, "oneway") == 0) {
                 if (strcmp(v_str, "yes") == 0 || strcmp(v_str, "1") == 0) {
                     current_way.oneway = 1;
@@ -216,7 +261,6 @@ void parse_osm(const char* filename) {
             }
         }
 
-        // Verifica se é um nó dentro de uma via
         else if (inside_way && strstr(line, "<nd")) {
             char ref_str[64];
             extract_attr(line, "ref=", ref_str);
@@ -227,7 +271,6 @@ void parse_osm(const char* filename) {
             }
         }
 
-        // Fim de uma via
         else if (inside_way && strstr(line, "</way>")) {
             inside_way = 0;
             if (current_way.count > 1 && total_ways < MAX_WAYS) {
@@ -250,13 +293,11 @@ void parse_osm(const char* filename) {
         nodes[i].y = maxY - nodes[i].y; 
     }
 
-    // Imprime nós
     fprintf(outFile, "%d\t%d\t%d\t%d\n", total_nodes, 2, 0, 1);
     for (int i = 0; i < total_nodes; i++) {
         fprintf(outFile, "%d\t%f\t%f\n", nodes[i].id_interno, nodes[i].x, nodes[i].y);
     }
 
-    // Conta total de arestas para o cabeçalho
     int numID = 0;
     for (int i = 0; i < total_ways; i++) {
         for (int j = 0; j < ways[i].count - 1; j++) {
@@ -272,7 +313,6 @@ void parse_osm(const char* filename) {
             int from = ways[i].node_ids[j];
             int to = ways[i].node_ids[j + 1];
             
-            // IMPRIME A NOVA VARIÁVEL AQUI (0 ou 1) em vez do 0 fixo
             fprintf(outFile, "%d\t%d\t%d\t%d\n", numID++, from, to, ways[i].oneway);
         }
     }
@@ -283,6 +323,13 @@ void parse_osm(const char* filename) {
     fclose(outFile); 
 }
 
+/**
+ * @brief Ponto de entrada do programa.
+ * 
+ * @param argc Quantidade de argumentos passados por linha de comando.
+ * @param argv Vetor contendo as strings dos argumentos.
+ * @return int Código de retorno (0 para sucesso, 1 para erro).
+ */
 int main(int argc, char* argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Uso: %s arquivo.osm\n", argv[0]);
