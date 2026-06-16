@@ -210,7 +210,7 @@ private:
     bool isAddingNode;
     bool isAddingEdge;
     bool isRemovingEdge;
-    int edgeNodeA;
+    std::vector<int> pendingStreetNodes;
 
     // Lista de paradas intermediárias
     std::vector<int> paradas;

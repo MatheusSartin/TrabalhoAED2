@@ -385,7 +385,7 @@ MainWindow::MainWindow(QWidget *parent)
     isAddingNode    = false;
     isAddingEdge    = false;
     isRemovingEdge  = false;
-    edgeNodeA       = -1;
+    pendingStreetNodes.clear();
   
     ui->graphicsView->setDragMode(QGraphicsView::NoDrag);
     ui->graphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
@@ -527,42 +527,55 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 }
 
                 int nearestNode  = findNearestNode(scenePos);
-                if (nearestNode >= 0) {
-                    if (isAddingEdge) {
-                        if (edgeNodeA == -1) {
-                            edgeNodeA = nearestNode;
-                            ui->lblStatus->setText(QString("Rua: Nó %1 selecionado. Agora clique no SEGUNDO nó.").arg(edgeNodeA));
-                            // Realce do nó A selecionado
-                            nodeItems[edgeNodeA]->setBrush(QBrush(QColor("#F59E0B")));
-                        } else {
-                            if (nearestNode != edgeNodeA) {
-                                int u = edgeNodeA;
-                                int v = nearestNode;
-                                double dx = currentMap->coordenadas[u].first - currentMap->coordenadas[v].first;
-                                double dy = currentMap->coordenadas[u].second - currentMap->coordenadas[v].second;
-                                double dist = std::sqrt(dx*dx + dy*dy);
-                                
-                                // Adiciona as arestas (ida e volta para mão dupla)
-                                currentMap->adjacencias[u].push_back({v, dist});
-                                currentMap->adjacencias[v].push_back({u, dist});
-                                
-                                ui->lblStatus->setText(QString("Trecho %1 ↔ %2 adicionado. Continue clicando para estender a rua, ou clique duas vezes no mesmo nó para soltar.").arg(u).arg(v));
-                                edgeNodeA = v; // Transfere a ponta da rua para o novo nó
-                                
-                                drawMap();
-                                highlightSelectedNodes();
-                                nodeItems[edgeNodeA]->setBrush(QBrush(QColor("#F59E0B"))); // Mantém destacado
-                            } else {
-                                // Clicar no mesmo nó encerra a rua atual, permitindo começar outra
-                                edgeNodeA = -1;
-                                ui->lblStatus->setText("Rua finalizada. Clique em um novo nó inicial para criar outra rua.");
-                                drawMap();
-                                highlightSelectedNodes();
-                            }
+                
+                if (isAddingEdge) {
+                    if (nearestNode >= 0) {
+                        // Clicou no mesmo nó duas vezes seguidas: encerra a trilha atual
+                        if (!pendingStreetNodes.empty() && pendingStreetNodes.back() == nearestNode) {
+                            pendingStreetNodes.clear();
+                            isAddingEdge = false;
+                            ui->graphicsView->viewport()->setCursor(Qt::ArrowCursor);
+                            ui->lblStatus->setText("Trilha finalizada.");
+                            drawMap();
+                            highlightSelectedNodes();
+                            return true;
                         }
-                        return true;
-                    }
 
+                        pendingStreetNodes.push_back(nearestNode);
+                        
+                        // Se houver mais de um nó na lista, já cria a aresta imediatamente
+                        if (pendingStreetNodes.size() >= 2) {
+                            int u = pendingStreetNodes[pendingStreetNodes.size() - 2];
+                            int v = nearestNode;
+                            double dx = currentMap->coordenadas[u].first - currentMap->coordenadas[v].first;
+                            double dy = currentMap->coordenadas[u].second - currentMap->coordenadas[v].second;
+                            double dist = std::sqrt(dx*dx + dy*dy);
+                            
+                            // Comita a aresta no grafo na mesma hora
+                            currentMap->adjacencias[u].push_back({v, dist});
+                            currentMap->adjacencias[v].push_back({u, dist});
+                        }
+                        
+                        ui->lblStatus->setText(QString("Nó %1 conectado! Continue clicando em nós para estender, ou clique no mesmo nó novamente para encerrar a trilha.").arg(nearestNode));
+                        drawMap(); // Redesenha para mostrar a rua oficial em azul
+                        highlightSelectedNodes();
+                        
+                        // Mantém o nó atual destacado em laranja para indicar foco
+                        nodeItems[nearestNode]->setBrush(QBrush(QColor("#F59E0B")));
+                        
+                    } else {
+                        // Clicou no vazio: encerra a trilha atual
+                        pendingStreetNodes.clear();
+                        isAddingEdge = false;
+                        ui->graphicsView->viewport()->setCursor(Qt::ArrowCursor);
+                        ui->lblStatus->setText("Criação de rua encerrada.");
+                        drawMap();
+                        highlightSelectedNodes();
+                    }
+                    return true;
+                }
+
+                if (nearestNode >= 0) {
                     if (nextClickTarget == 0) {
                         ui->spinOrigem->setValue(nearestNode);
                         nextClickTarget = 1;
@@ -1510,9 +1523,9 @@ void MainWindow::on_btnAdicionarAresta_clicked()
     isAddingNode = false;
     isRemovingEdge = false;
     isAddingEdge = true;
-    edgeNodeA = -1;
+    pendingStreetNodes.clear();
     ui->graphicsView->viewport()->setCursor(Qt::CrossCursor);
-    ui->lblStatus->setText("Modo Adição de Rua: Clique no PRIMEIRO nó da rua.");
+    ui->lblStatus->setText("Modo Adição de Rua: Clique em um nó para começar o traçado.");
 }
 
 void MainWindow::on_btnRemoverAresta_clicked()
