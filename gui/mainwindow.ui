@@ -134,6 +134,27 @@ QListWidget::item:selected { background-color: #3D3D8E; color: white; }
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnAdicionarNo">
+         <property name="text"><string>+ Adicionar Nó</string></property>
+         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+         <property name="toolTip"><string>Clique para adicionar um novo nó interativamente no mapa</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnAdicionarAresta">
+         <property name="text"><string>+ Adicionar Rua</string></property>
+         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+         <property name="toolTip"><string>Clique em 2 nós sequencialmente para conectá-los</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnRemoverAresta">
+         <property name="text"><string>- Remover Rua</string></property>
+         <property name="cursor"><cursorShape>PointingHandCursor</cursorShape></property>
+         <property name="toolTip"><string>Clique em uma rua no mapa para apagá-la</string></property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="labelOrigem">
          <property name="text"><string>Nó Origem</string></property>
         </widget>

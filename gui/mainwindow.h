@@ -183,6 +183,9 @@ protected:
 private slots:
     // Ações da interface gráfica
     void on_btnCarregarMapa_clicked();
+    void on_btnAdicionarNo_clicked();
+    void on_btnAdicionarAresta_clicked();
+    void on_btnRemoverAresta_clicked();
     void on_btnCalcular_clicked();
     void on_btnLimpar_clicked();
     void on_btnCopiarImagem_clicked();
@@ -202,6 +205,12 @@ private:
     // Controle do destino de cliques no mapa
     int nextClickTarget;
     int clickCount;
+
+    // Controle de edição interativa
+    bool isAddingNode;
+    bool isAddingEdge;
+    bool isRemovingEdge;
+    int edgeNodeA;
 
     // Lista de paradas intermediárias
     std::vector<int> paradas;

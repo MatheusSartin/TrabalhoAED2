@@ -16,6 +16,7 @@
 #include <QProcess>
 #include <QFile>
 #include <cmath>
+#include <algorithm>
 #include "../core/projects.h"
 
 // Implementação de RouteLineItem
@@ -29,7 +30,7 @@
  * @param y2 Coordenada Y de fim.
  * @param fromNode ID do nó inicial.
  * @param toNode ID do nó final.
- * @param legIndex Índice do trecho da rota.
+ * @param legIndex Ãndice do trecho da rota.
  * @param mainWindow Ponteiro para a janela principal.
  * @param parent Item gráfico pai.
  */
@@ -220,7 +221,7 @@ void RouteLineItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
  * @param y Posição Y central do ponto.
  * @param r Raio do marcador visual.
  * @param nodeId ID do nó do grafo representado.
- * @param waypointIndex Índice deste ponto na sequência de paradas.
+ * @param waypointIndex Ãndice deste ponto na sequência de paradas.
  * @param mainWindow Ponteiro para a janela principal.
  * @param parent Item gráfico pai.
  */
@@ -381,7 +382,11 @@ MainWindow::MainWindow(QWidget *parent)
     nodeLabel       = nullptr;
     nextClickTarget = 0;
     clickCount      = 0;
- 
+    isAddingNode    = false;
+    isAddingEdge    = false;
+    isRemovingEdge  = false;
+    edgeNodeA       = -1;
+  
     ui->graphicsView->setDragMode(QGraphicsView::NoDrag);
     ui->graphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     ui->graphicsView->setResizeAnchor(QGraphicsView::AnchorUnderMouse);
@@ -459,8 +464,105 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 }
  
                 QPointF scenePos = ui->graphicsView->mapToScene(mouseEvent->pos());
+                
+                if (isRemovingEdge) {
+                    QList<QGraphicsItem*> clickedItems = ui->graphicsView->items(mouseEvent->pos());
+                    for (auto item : clickedItems) {
+                        if (item->type() == QGraphicsLineItem::Type && item->zValue() == 0) {
+                            int u = item->data(0).toInt();
+                            int v = item->data(1).toInt();
+                            
+                            // Remove v de u
+                            currentMap->adjacencias[u].erase(
+                                std::remove_if(currentMap->adjacencias[u].begin(), currentMap->adjacencias[u].end(),
+                                               [v](const std::pair<int, double>& p) { return p.first == v; }),
+                                currentMap->adjacencias[u].end());
+                                
+                            // Remove u de v
+                            currentMap->adjacencias[v].erase(
+                                std::remove_if(currentMap->adjacencias[v].begin(), currentMap->adjacencias[v].end(),
+                                               [u](const std::pair<int, double>& p) { return p.first == u; }),
+                                currentMap->adjacencias[v].end());
+                            
+                            ui->lblStatus->setText(QString("Rua entre Nós %1 e %2 removida!").arg(u).arg(v));
+                            isRemovingEdge = false;
+                            ui->graphicsView->viewport()->setCursor(Qt::ArrowCursor);
+                            drawMap();
+                            highlightSelectedNodes();
+                            return true;
+                        }
+                    }
+                    return true;
+                }
+
+                if (isAddingNode) {
+                    int novoId = currentMap->coordenadas.size();
+                    currentMap->coordenadas.push_back({scenePos.x(), scenePos.y()});
+                    currentMap->adjacencias.push_back({}); // Nova lista de adjacências vazia
+
+                    QBrush nodeBrush(QColor("#3B82F6"));
+                    QPen nodePen(QColor("#1E3A5F"));
+                    nodePen.setWidthF(nodeRadius * 0.15);
+                    
+                    QGraphicsEllipseItem* el = scene->addEllipse(
+                        scenePos.x() - nodeRadius,
+                        scenePos.y() - nodeRadius,
+                        nodeRadius * 2,
+                        nodeRadius * 2,
+                        nodePen,
+                        nodeBrush
+                    );
+                    el->setZValue(1);
+                    nodeItems.push_back(el);
+
+                    ui->spinOrigem->setMaximum(novoId);
+                    ui->spinDestino->setMaximum(novoId);
+                    ui->spinParada->setMaximum(novoId);
+
+                    ui->lblStatus->setText(QString("Nó %1 adicionado com sucesso!").arg(novoId));
+
+                    isAddingNode = false;
+                    ui->graphicsView->viewport()->setCursor(Qt::ArrowCursor);
+                    return true;
+                }
+
                 int nearestNode  = findNearestNode(scenePos);
                 if (nearestNode >= 0) {
+                    if (isAddingEdge) {
+                        if (edgeNodeA == -1) {
+                            edgeNodeA = nearestNode;
+                            ui->lblStatus->setText(QString("Rua: Nó %1 selecionado. Agora clique no SEGUNDO nó.").arg(edgeNodeA));
+                            // Realce do nó A selecionado
+                            nodeItems[edgeNodeA]->setBrush(QBrush(QColor("#F59E0B")));
+                        } else {
+                            if (nearestNode != edgeNodeA) {
+                                int u = edgeNodeA;
+                                int v = nearestNode;
+                                double dx = currentMap->coordenadas[u].first - currentMap->coordenadas[v].first;
+                                double dy = currentMap->coordenadas[u].second - currentMap->coordenadas[v].second;
+                                double dist = std::sqrt(dx*dx + dy*dy);
+                                
+                                // Adiciona as arestas (ida e volta para mão dupla)
+                                currentMap->adjacencias[u].push_back({v, dist});
+                                currentMap->adjacencias[v].push_back({u, dist});
+                                
+                                ui->lblStatus->setText(QString("Trecho %1 ↔ %2 adicionado. Continue clicando para estender a rua, ou clique duas vezes no mesmo nó para soltar.").arg(u).arg(v));
+                                edgeNodeA = v; // Transfere a ponta da rua para o novo nó
+                                
+                                drawMap();
+                                highlightSelectedNodes();
+                                nodeItems[edgeNodeA]->setBrush(QBrush(QColor("#F59E0B"))); // Mantém destacado
+                            } else {
+                                // Clicar no mesmo nó encerra a rua atual, permitindo começar outra
+                                edgeNodeA = -1;
+                                ui->lblStatus->setText("Rua finalizada. Clique em um novo nó inicial para criar outra rua.");
+                                drawMap();
+                                highlightSelectedNodes();
+                            }
+                        }
+                        return true;
+                    }
+
                     if (nextClickTarget == 0) {
                         ui->spinOrigem->setValue(nearestNode);
                         nextClickTarget = 1;
@@ -726,6 +828,8 @@ void MainWindow::drawMap()
                     double y2 = currentMap->coordenadas[v].second;
                     QGraphicsLineItem* line = scene->addLine(x1, y1, x2, y2, edgePen);
                     line->setZValue(0);
+                    line->setData(0, static_cast<int>(u));
+                    line->setData(1, v);
                     edgeItems.push_back(line);
                 }
             } else {
@@ -733,6 +837,8 @@ void MainWindow::drawMap()
                 double y2 = currentMap->coordenadas[v].second;
                 QGraphicsLineItem* line = scene->addLine(x1, y1, x2, y2, onewayPen);
                 line->setZValue(0);
+                line->setData(0, static_cast<int>(u));
+                line->setData(1, v);
                 edgeItems.push_back(line);
             }
         }
@@ -842,7 +948,7 @@ void MainWindow::on_btnCalcular_clicked()
         ui->lblNodes->setText(QString("Nós Explorados: %1").arg(finalRes.nodesExplored));
         
         ui->listWidgetCaminho->clear();
-        auto *item = new QListWidgetItem("  ⚠️ Sem rota possível com a sequência de paradas fornecida.");
+        auto *item = new QListWidgetItem("  âš ï¸ Sem rota possível com a sequência de paradas fornecida.");
         item->setForeground(QColor("#FF6B6B"));
         ui->listWidgetCaminho->addItem(item);
 
@@ -1021,13 +1127,13 @@ void MainWindow::exibirCaminho(const DijkstraResult &resultado, int origem, int 
     ui->listWidgetCaminho->clear();
  
     if (!resultado.encontrado) {
-        auto *item = new QListWidgetItem(QString("  ⚠️ Sem rota entre o nó %1 e o nó %2.").arg(origem).arg(destino));
+        auto *item = new QListWidgetItem(QString("Sem rota entre o nó %1 e o nó %2.").arg(origem).arg(destino));
         item->setForeground(QColor("#EF4444"));
         ui->listWidgetCaminho->addItem(item);
         return;
     }
  
-    auto *header = new QListWidgetItem("  Passo       Nó O.  →  Nó D.       Distância");
+    auto *header = new QListWidgetItem("  Passo       Nó O.  â†’  Nó D.       Distância");
     header->setBackground(QColor("#E5E7EB"));
     header->setForeground(QColor("#111827"));
     QFont fHeader = header->font(); fHeader.setBold(true); header->setFont(fHeader);
@@ -1037,7 +1143,7 @@ void MainWindow::exibirCaminho(const DijkstraResult &resultado, int origem, int 
     const auto &caminho = resultado.caminho;
     for (size_t i = 0; i < caminho.size() - 1; i++) {
         double distTrecho = resultado.distanciasTrecho[i];
-        QString linha = QString("  %1         %2  →  %3           %4 m")
+        QString linha = QString("  %1         %2  â†’  %3           %4 m")
                             .arg(i + 1, 4)
                             .arg(caminho[i], 6)
                             .arg(caminho[i + 1], 6)
@@ -1136,6 +1242,15 @@ void MainWindow::aplicarEstilo()
 
         QPushButton#btnCarregarMapa { background-color: #2563EB; color: white; border: none; }
         QPushButton#btnCarregarMapa:hover { background-color: #1D4ED8; }
+        
+        QPushButton#btnAdicionarNo { background-color: #F59E0B; color: white; border: none; }
+        QPushButton#btnAdicionarNo:hover { background-color: #D97706; }
+        
+        QPushButton#btnAdicionarAresta { background-color: #F59E0B; color: white; border: none; }
+        QPushButton#btnAdicionarAresta:hover { background-color: #D97706; }
+        
+        QPushButton#btnRemoverAresta { background-color: #EF4444; color: white; border: none; }
+        QPushButton#btnRemoverAresta:hover { background-color: #DC2626; }
         
         QPushButton#btnCalcular { background-color: #10B981; color: white; border: none; }
         QPushButton#btnCalcular:hover { background-color: #059669; }
@@ -1244,7 +1359,7 @@ void MainWindow::on_btnRemoverParada_clicked()
 /**
  * @brief Callback disparado quando uma linha de rota é arrastada, inserindo um novo ponto de parada.
  * 
- * @param legIndex Índice do trecho da rota que foi arrastado.
+ * @param legIndex Ãndice do trecho da rota que foi arrastado.
  * @param releasePos Posição da soltura do mouse.
  */
 void MainWindow::onRouteSegmentDragged(int legIndex, const QPointF& releasePos)
@@ -1372,4 +1487,43 @@ void MainWindow::onWaypointDragged(int waypointIndex, const QPointF& releasePos)
             on_btnCalcular_clicked();
         }
     }
+}
+void MainWindow::on_btnAdicionarNo_clicked()
+{
+    if (!currentMap) {
+        QMessageBox::warning(this, "Aviso", "Carregue um mapa primeiro antes de adicionar nós.");
+        return;
+    }
+    isAddingNode = true;
+    isAddingEdge = false;
+    isRemovingEdge = false;
+    ui->graphicsView->viewport()->setCursor(Qt::CrossCursor);
+    ui->lblStatus->setText("Modo Adição de Nó: Clique no mapa onde deseja criar o novo nó.");
+}
+
+void MainWindow::on_btnAdicionarAresta_clicked()
+{
+    if (!currentMap) {
+        QMessageBox::warning(this, "Aviso", "Carregue um mapa primeiro antes de adicionar ruas.");
+        return;
+    }
+    isAddingNode = false;
+    isRemovingEdge = false;
+    isAddingEdge = true;
+    edgeNodeA = -1;
+    ui->graphicsView->viewport()->setCursor(Qt::CrossCursor);
+    ui->lblStatus->setText("Modo Adição de Rua: Clique no PRIMEIRO nó da rua.");
+}
+
+void MainWindow::on_btnRemoverAresta_clicked()
+{
+    if (!currentMap) {
+        QMessageBox::warning(this, "Aviso", "Carregue um mapa primeiro antes de remover ruas.");
+        return;
+    }
+    isAddingNode = false;
+    isAddingEdge = false;
+    isRemovingEdge = true;
+    ui->graphicsView->viewport()->setCursor(Qt::CrossCursor);
+    ui->lblStatus->setText("Modo Remoção de Rua: Clique em uma rua existente no mapa para apagá-la.");
 }
