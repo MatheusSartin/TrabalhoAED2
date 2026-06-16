@@ -2,15 +2,28 @@
 
 using namespace std;
 
+/**
+ * @brief Calcula a distância euclidiana entre duas coordenadas bidimensionais.
+ * 
+ * @param x1 Posição X do primeiro ponto.
+ * @param y1 Posição Y do primeiro ponto.
+ * @param x2 Posição X do segundo ponto.
+ * @param y2 Posição Y do segundo ponto.
+ * @return double Distância calculada entre os dois pontos.
+ */
 double calcularDistancia(double x1, double y1, double x2, double y2) {
   return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
-// Carrega o mapa
+/**
+ * @brief Carrega os dados geográficos de nós e arestas de um arquivo de mapa.
+ * 
+ * @param nomeArquivo Caminho para o arquivo contendo a definição do mapa (formato .poly).
+ * @return MapData Estrutura contendo o grafo e as coordenadas de todos os nós.
+ */
 MapData carregarMapa(string nomeArquivo) {
-
-  vector<pair<double, double>> coordenadas; // cada node i tera uma coordenada
-  Grafo adjacencias; // cada node i tera um vector de arestas: A<destino, peso>
+  vector<pair<double, double>> coordenadas;
+  Grafo adjacencias;
 
   ifstream arquivo(nomeArquivo);
 
@@ -26,48 +39,46 @@ MapData carregarMapa(string nomeArquivo) {
   adjacencias.resize(totalNos);
 
   for (int i = 0; i < totalNos; i++) {
-    int id_no;
+    int idNo;
     double x, y;
 
-    if (!(arquivo >> id_no >> x >> y))
+    if (!(arquivo >> idNo >> x >> y))
       break;
 
-    if (id_no < 0 || id_no >= totalNos) {
-      cout << "ERRO FATAL: O mapa tentou criar um no com ID " << id_no
+    if (idNo < 0 || idNo >= totalNos) {
+      cout << "ERRO FATAL: O mapa tentou criar um no com ID " << idNo
            << " mas o limite e " << (totalNos - 1) << endl;
       exit(1);
     }
 
-    coordenadas[id_no] = make_pair(x, y);
+    coordenadas[idNo] = make_pair(x, y);
   }
 
   int totalArestas, lixo3;
   arquivo >> totalArestas >> lixo3;
 
-  // Popula as arestas
   for (int i = 0; i < totalArestas; i++) {
-    int id_aresta, origem, destino, direcao;
+    int idAresta, origem, destino, direcao;
 
-    if (!(arquivo >> id_aresta >> origem >> destino >> direcao))
+    if (!(arquivo >> idAresta >> origem >> destino >> direcao))
       break;
 
-    if (origem < 0 || origem >= totalNos || destino < 0 ||
-        destino >= totalNos) {
-      cout << "Aviso: Aresta " << id_aresta
+    if (origem < 0 || origem >= totalNos || destino < 0 || destino >= totalNos) {
+      cout << "Aviso: Aresta " << idAresta
            << " ignorada! Tenta ligar nos invalidos (" << origem << " -> "
            << destino << ")" << endl;
       continue;
     }
 
-    double x_origem = coordenadas[origem].first;
-    double y_origem = coordenadas[origem].second;
-    double x_destino = coordenadas[destino].first;
-    double y_destino = coordenadas[destino].second;
+    double xOrigem = coordenadas[origem].first;
+    double yOrigem = coordenadas[origem].second;
+    double xDestino = coordenadas[destino].first;
+    double yDestino = coordenadas[destino].second;
 
-    double peso = calcularDistancia(x_origem, y_origem, x_destino, y_destino);
-
+    double peso = calcularDistancia(xOrigem, yOrigem, xDestino, yDestino);
     adjacencias[origem].push_back(make_pair(destino, peso));
 
+    // Se a via for de mão dupla (direção == 0), adiciona a via de volta no grafo
     if (direcao == 0) {
       adjacencias[destino].push_back(make_pair(origem, peso));
     }
