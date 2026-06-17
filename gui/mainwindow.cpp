@@ -554,10 +554,19 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                             // Comita a aresta no grafo na mesma hora
                             currentMap->adjacencias[u].push_back({v, dist});
                             currentMap->adjacencias[v].push_back({u, dist});
+
+                            // Desativa a ferramenta imediatamente após criar UMA rua
+                            pendingStreetNodes.clear();
+                            isAddingEdge = false;
+                            ui->graphicsView->viewport()->setCursor(Qt::ArrowCursor);
+                            ui->lblStatus->setText(QString("Rua %1 ↔ %2 adicionada! Modo de navegação reativado.").arg(u).arg(v));
+                            drawMap(); 
+                            highlightSelectedNodes();
+                            return true;
                         }
                         
-                        ui->lblStatus->setText(QString("Nó %1 conectado! Continue clicando em nós para estender, ou clique no mesmo nó novamente para encerrar a trilha.").arg(nearestNode));
-                        drawMap(); // Redesenha para mostrar a rua oficial em azul
+                        ui->lblStatus->setText(QString("Nó %1 selecionado! Clique no segundo nó para criar a rua.").arg(nearestNode));
+                        drawMap(); // Redesenha
                         highlightSelectedNodes();
                         
                         // Mantém o nó atual destacado em laranja para indicar foco
